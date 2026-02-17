@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Approve Device — HyperStack</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 40px; max-width: 440px; width: 90%; text-align: center; }
+  .logo { font-size: 28px; margin-bottom: 8px; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .sub { color: #888; font-size: 14px; margin-bottom: 32px; }
+  
+  /* Login form */
+  .form-group { margin-bottom: 16px; text-align: left; }
+  .form-group label { display: block; font-size: 13px; color: #888; margin-bottom: 6px; }
+  .form-group input { width: 100%; padding: 10px 14px; background: #0a0a0a; border: 1px solid #333; border-radius: 8px; color: #e0e0e0; font-size: 15px; outline: none; }
+  .form-group input:focus { border-color: #4f8; }
+  
+  /* Code input */
+  .code-input { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 24px; text-align: center; letter-spacing: 4px; text-transform: uppercase; }
+  
+  /* Buttons */
+  .btn { display: inline-block; padding: 12px 24px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; width: 100%; margin-top: 8px; }
+  .btn-approve { background: #4f8; color: #000; }
+  .btn-approve:hover { background: #3e7; }
+  .btn-deny { background: transparent; color: #888; border: 1px solid #333; margin-top: 12px; }
+  .btn-deny:hover { color: #e0e0e0; border-color: #555; }
+  .btn-login { background: #4f8; color: #000; }
+  .btn-login:hover { background: #3e7; }
+  
+  .status { margin-top: 16px; font-size: 14px; padding: 10px; border-radius: 8px; }
+  .status.success { background: rgba(68,255,136,0.1); color: #4f8; }
+  .status.error { background: rgba(255,68,68,0.1); color: #f44; }
+  .status.info { background: rgba(68,136,255,0.1); color: #48f; }
+  
+  .section { display: none; }
+  .section.active { display: block; }
+  .divider { height: 1px; background: #2a2a2a; margin: 24px 0; }
+  .small { font-size: 12px; color: #666; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">🃏</div>
+  <h1>HyperStack Device Login</h1>
+  
+  <!-- Step 1: Login (if not already authenticated) -->
+  <div id="login-section" class="section active">
+    <p class="sub">Sign in to approve your CLI/VPS device</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-login" onclick="login()">Sign In</button>
+    <div id="login-status"></div>
+    <p class="small">Don't have an account? <a href="https://cascadeai.dev/hyperstack" style="color:#4f8">Sign up free →</a></p>
+  </div>
+  
+  <!-- Step 2: Enter/confirm code -->
+  <div id="code-section" class="section">
+    <p class="sub">Enter the code shown in your terminal</p>
+    <div class="form-group">
+      <label>Device Code</label>
+      <input type="text" id="user-code" class="code-input" placeholder="ABCD-EF23" maxlength="9" autocomplete="off">
+    </div>
+    <button class="btn btn-approve" onclick="approve()">Approve Device</button>
+    <button class="btn btn-deny" onclick="deny()">Deny</button>
+    <div id="code-status"></div>
+    <div class="divider"></div>
+    <p class="small">Your API key will be sent to the CLI. The device will access your HyperStack workspace.</p>
+  </div>
+  
+  <!-- Step 3: Done -->
+  <div id="done-section" class="section">
+    <div style="font-size:48px; margin-bottom:16px">✅</div>
+    <h2 style="margin-bottom:8px">Device Approved</h2>
+    <p class="sub">You can close this window. Your CLI is now authenticated.</p>
+    <p class="small">Your API key was sent securely to the device.<br>Revoke anytime at <a href="https://cascadeai.dev/hyperstack" style="color:#4f8">cascadeai.dev/hyperstack</a></p>
+  </div>
+</div>
+
+<script>
+const API = "https://hyperstack-cloud.vercel.app";
+let authToken = null;
+
+// Check if code was passed in URL
+const params = new URLSearchParams(window.location.search);
+const urlCode = params.get("code");
+
+function show(id) {
+  document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function showStatus(elId, msg, type) {
+  const el = document.getElementById(elId);
+  el.className = "status " + type;
+  el.textContent = msg;
+  el.style.display = "block";
+}
+
+async function login() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  if (!email || !password) { showStatus("login-status", "Email and password required", "error"); return; }
+  
+  try {
+    const res = await fetch(API + "/api/auth?action=login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showStatus("login-status", data.error || "Login failed", "error"); return; }
+    
+    authToken = data.token;
+    show("code-section");
+    
+    // Pre-fill code from URL if present
+    if (urlCode) {
+      document.getElementById("user-code").value = urlCode;
+    }
+  } catch (err) {
+    showStatus("login-status", "Connection error: " + err.message, "error");
+  }
+}
+
+async function approve() {
+  const userCode = document.getElementById("user-code").value.trim().toUpperCase();
+  if (!userCode || userCode.length < 8) { showStatus("code-status", "Enter the code from your terminal", "error"); return; }
+  
+  try {
+    const res = await fetch(API + "/api/auth?action=device-approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+      body: JSON.stringify({ user_code: userCode }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showStatus("code-status", data.error || "Approval failed", "error"); return; }
+    
+    show("done-section");
+  } catch (err) {
+    showStatus("code-status", "Error: " + err.message, "error");
+  }
+}
+
+async function deny() {
+  const userCode = document.getElementById("user-code").value.trim().toUpperCase();
+  if (!userCode) return;
+  
+  try {
+    await fetch(API + "/api/auth?action=device-deny", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+      body: JSON.stringify({ user_code: userCode }),
+    });
+    showStatus("code-status", "Device denied. You can close this window.", "info");
+  } catch (err) {
+    showStatus("code-status", "Error: " + err.message, "error");
+  }
+}
+
+// If user somehow has a stored token, skip login
+// (could extend with localStorage but keeping it simple)
+</script>
+</body>
+</html>

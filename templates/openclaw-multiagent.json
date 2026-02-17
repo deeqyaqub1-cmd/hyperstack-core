@@ -1,0 +1,98 @@
+{
+  "name": "openclaw-multiagent",
+  "description": "Pre-configured typed cards and relations for OpenClaw multi-agent coordination. Replaces GOALS.md + DECISIONS.md with structured, queryable graph memory.",
+  "version": "1.0.0",
+
+  "cardTypes": {
+    "task": {
+      "description": "A unit of work assigned to an agent",
+      "fields": ["status", "priority", "assignee", "deadline"],
+      "statuses": ["todo", "in-progress", "blocked", "done", "cancelled"]
+    },
+    "decision": {
+      "description": "A choice made by an agent with rationale",
+      "fields": ["rationale", "alternatives", "decidedBy", "decidedAt"]
+    },
+    "blocker": {
+      "description": "Something preventing progress on a task",
+      "fields": ["severity", "resolvedBy", "resolvedAt"]
+    },
+    "goal": {
+      "description": "A high-level objective (replaces GOALS.md)",
+      "fields": ["deadline", "progress", "owner"]
+    },
+    "agent": {
+      "description": "An agent registration card",
+      "fields": ["role", "model", "capabilities"]
+    },
+    "context": {
+      "description": "Shared context that multiple agents need",
+      "fields": ["scope", "expiresAt"]
+    }
+  },
+
+  "relationTypes": {
+    "owns": "Agent/person owns a task or project",
+    "assigned_to": "Task is assigned to an agent",
+    "blocks": "This card blocks another card",
+    "blocked_by": "This card is blocked by another card",
+    "depends_on": "This card depends on another card",
+    "decided": "Agent/person made this decision",
+    "triggers": "Change to this card triggers effects on target",
+    "subtask_of": "This task is a subtask of a larger task",
+    "related": "General association"
+  },
+
+  "rules": [
+    {
+      "name": "auto-blocked",
+      "description": "If a task has incoming 'blocks' relations, mark it as blocked",
+      "when": "card.cardType === 'task' && card.incomingLinks.some(l => l.relation === 'blocks')",
+      "suggest": "Consider updating task status to 'blocked'"
+    },
+    {
+      "name": "unowned-task",
+      "description": "Tasks without an owner should be flagged",
+      "when": "card.cardType === 'task' && !card.links.some(l => l.relation === 'assigned_to')",
+      "suggest": "This task has no assigned agent"
+    },
+    {
+      "name": "decision-needs-rationale",
+      "description": "Decisions should include rationale",
+      "when": "card.cardType === 'decision' && (!card.body || card.body.length < 20)",
+      "suggest": "Decision lacks rationale — add a body explaining why"
+    }
+  ],
+
+  "starterCards": [
+    {
+      "slug": "project-root",
+      "title": "Project Root",
+      "body": "Root node for the project knowledge graph. All agents, goals, and major decisions link here.",
+      "cardType": "project",
+      "stack": "projects",
+      "keywords": ["project", "root", "main"]
+    }
+  ],
+
+  "agentSetup": {
+    "description": "Recommended agent configuration for multi-agent OpenClaw + HyperStack",
+    "agents": {
+      "coordinator": {
+        "role": "Routes tasks, monitors blockers, ensures no duplicate work",
+        "model": "claude-sonnet-4-20250514",
+        "tools": ["hs_search", "hs_blockers", "hs_graph", "hs_decide"]
+      },
+      "researcher": {
+        "role": "Investigates questions, stores findings as context cards",
+        "model": "claude-sonnet-4-20250514",
+        "tools": ["hs_search", "hs_store", "hs_my_cards"]
+      },
+      "builder": {
+        "role": "Implements code, records technical decisions",
+        "model": "claude-sonnet-4-20250514",
+        "tools": ["hs_search", "hs_store", "hs_decide", "hs_blockers"]
+      }
+    }
+  }
+}

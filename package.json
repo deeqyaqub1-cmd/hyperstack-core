@@ -1,0 +1,50 @@
+{
+  "name": "hyperstack-core",
+  "version": "1.0.0",
+  "description": "Typed graph memory for AI agents. Replace GOALS.md with queryable cards + relations. Works with OpenClaw, Claude Desktop, Cursor.",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "hyperstack-core": "./cli.js"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./src/client.js",
+    "./adapters/openclaw": "./adapters/openclaw.js"
+  },
+  "files": [
+    "index.js",
+    "cli.js",
+    "src/",
+    "adapters/",
+    "templates/",
+    "examples/",
+    "SKILL.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "hyperstack",
+    "knowledge-graph",
+    "ai-agents",
+    "memory",
+    "openclaw",
+    "multi-agent",
+    "mcp",
+    "typed-relations",
+    "graph-memory",
+    "agent-coordination"
+  ],
+  "author": "CascadeAI <deeq.yaqub1@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deeqyaqub1-cmd/hyperstack-core"
+  },
+  "homepage": "https://cascadeai.dev/hyperstack",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

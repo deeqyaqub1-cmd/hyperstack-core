@@ -1,0 +1,4 @@
+node_modules/
+.hyperstack/
+*.tgz
+.DS_Store
