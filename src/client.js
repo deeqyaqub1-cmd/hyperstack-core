@@ -150,6 +150,32 @@ class HyperStackClient {
     return this._request("GET", url);
   }
 
+  /**
+   * Deterministic impact analysis — reverse traversal.
+   * Answers: "what depends on X?" / "what would break if X changed?"
+   * 
+   * @param {string} slug — the card to analyse
+   * @param {object} [opts]
+   * @param {number} [opts.depth=2] — hops to traverse upstream (1-3)
+   * @param {string} [opts.relation] — filter by relation type (e.g. "blocks", "depends_on")
+   * @returns {Promise<{root: string, mode: "impact", nodes: Array, edges: Array}>}
+   * 
+   * @example
+   * // What depends on the billing API?
+   * const result = await hs.impact("billing-api", { depth: 2 });
+   * // Returns all cards that link TO billing-api, up to 2 hops upstream
+   * 
+   * @example
+   * // What specifically blocks the deploy?
+   * const result = await hs.impact("prod-deploy", { relation: "blocks" });
+   */
+  async impact(slug, opts = {}) {
+    const { depth = 2, relation } = opts;
+    let url = `/api/graph?workspace=${this.workspace}&from=${slug}&mode=impact&depth=${depth}`;
+    if (relation) url += `&relation=${encodeURIComponent(relation)}`;
+    return this._request("GET", url);
+  }
+
   // ─── Multi-Agent Helpers ──────────────────────────────
 
   /**
