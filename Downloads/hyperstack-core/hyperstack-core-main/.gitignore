@@ -1,7 +1,0 @@
-# Ignore everything outside this folder
-../../*
-../../../*
-node_modules/
-.env
-*.log
-Downloads/
